@@ -1,3 +1,4 @@
+
 CREATE table vornamen
 (
 	jahr_id int,
@@ -13,21 +14,6 @@ CREATE table vornamen
     bezirk_name varchar (30)
 );
 
- CREATE TABLE jahre
- ( 
-	jahr_id int PRIMARY KEY,
-    jahr int
-);
-
-CREATE TABLE geschlecht
-(
-	geschlecht_bin int PRIMARY KEY,
-    geschlecht_name varchar(30)
-);
-
-INSERT INTO geschlecht (geschlecht_bin, geschlecht_name) VALUES
-    (1, 'männlich'),
-    (2, 'weiblich');
 
 
 USE babynames;
@@ -36,11 +22,6 @@ CHARACTER SET utf8mb4
 FIELDS terminated by ';'
 IGNORE 1 Lines;
 
-USE babynames;
-LOAD DATA LOCAL INFILE 'C:\\ProgramData\\MySQL\\MySQL Server 8.0\\Data\\babynames\\OGDEXT_VORNAMEN_1_C-JAHR-0.csv' INTO TABLE jahre
-CHARACTER SET utf8mb4
-FIELDS terminated by ';'
-IGNORE 1 Lines;
 
 USE babynames;
 LOAD DATA LOCAL INFILE 'C:\\ProgramData\\MySQL\\MySQL Server 8.0\\Data\\babynames\\OGDEXT_VORNAMEN_1_C-WOHNBEZIRK-0.csv' INTO TABLE wohnbezirke
@@ -48,7 +29,7 @@ CHARACTER SET utf8mb4
 FIELDS terminated by ';'
 IGNORE 1 Lines;
 
-CREATE VIEW bezirke AS
+CREATE TABLE bezirke AS
 SELECT bezirk_id, bezirk_name, 
 	CASE
 		WHEN SUBSTRING(bezirk_id, 1, 1) IN ('1') THEN 'Burgenland'
@@ -63,12 +44,6 @@ SELECT bezirk_id, bezirk_name,
         ELSE 'Unknown Bundesland'
 	END AS bundesland
 FROM wohnbezirke;
-
-
-CREATE VIEW vornamen_sum_view AS
-SELECT Vorname, sum(Anzahl) AS Gesamtanzahl
-FROM vornamen
-GROUP BY Vorname;
 
 
 
@@ -109,6 +84,13 @@ JOIN geschlvorn g ON v.vorname = g.vorname
 GROUP BY v.vorname, v.geschlecht_bin, v.jahr_id, v.bezirk_id
 ORDER BY v.vorname;
 
+SELECT v.vorname, sum(v.anzahl) AS Anzahl, v.geschlecht_bin
+FROM vornamen v
+JOIN geschlvorn g ON v.vorname = g.vorname
+WHERE v.vorname = 'Alex'
+GROUP BY v.vorname, v.geschlecht_bin
+ORDER BY v.vorname;
+
 create TABLE names_per_year AS
 SELECT vorname, jahr_id, geschlecht_bin, sum(anzahl) AS Anzahl
 FROM vornamen
@@ -116,13 +98,37 @@ GROUP BY vorname, jahr_id, geschlecht_bin
 ORDER BY Anzahl desc;
 
 #male_most_pop_names
+create VIEW male_pop_names AS
 SELECT DISTINCT jahr_id, vorname, anzahl
 FROM names_per_year
 WHERE geschlecht_bin = '1'
 ORDER BY Anzahl DESC;
 
 #female_most_pop_names
+create VIEW female_pop_names AS
 SELECT DISTINCT jahr_id, vorname, anzahl
 FROM names_per_year
 WHERE geschlecht_bin = '2'
 ORDER BY Anzahl DESC;
+
+create VIEW genderneutral_names_per_year AS
+SELECT v.vorname, sum(v.anzahl) AS Anzahl, v.geschlecht_bin, v.jahr_id
+FROM names_per_year v
+JOIN geschlvorn g ON v.vorname = g.vorname
+GROUP BY v.vorname, v.geschlecht_bin, v.jahr_id
+ORDER BY v.vorname;
+
+#view of the top 10 'genderneutral' names
+SELECT 
+    v.Vorname, 
+    SUM(v.Anzahl) as Total
+FROM 
+    vornamen v
+JOIN geschlvorn g ON v.vorname = g.vorname
+GROUP BY 
+    v.Vorname
+ORDER BY 
+    Total DESC
+LIMIT 10;
+
+
